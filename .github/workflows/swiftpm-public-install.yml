@@ -32,6 +32,7 @@ jobs:
           import PackageDescription
           let package = Package(
             name: "Consumer",
+            platforms: [.macOS(.v12)],
             dependencies: [.package(url: "https://github.com/AgentForge-Labs/swift-telegram-notifier.git", from: "0.2.0")],
             targets: [
               .executableTarget(
