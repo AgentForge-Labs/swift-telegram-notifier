@@ -1,0 +1,43 @@
+name: Public SwiftPM package and fresh consumer install
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-swiftpm-install:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Package source and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          swift package describe
+          swift test
+      - name: Clean public Git dependency installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          mkdir -p "$dir/Sources/Consumer"
+          cat > "$dir/Package.swift" <<'SWIFT'
+          // swift-tools-version: 5.9
+          import PackageDescription
+          let package = Package(
+            name: "Consumer",
+            dependencies: [.package(url: "https://github.com/AgentForge-Labs/swift-telegram-notifier.git", from: "0.2.0")],
+            targets: [.executableTarget(name: "Consumer", dependencies: ["AgentForgeTelegramNotifier"])]
+          )
+          SWIFT
+          printf 'import AgentForgeTelegramNotifier\nprint("SwiftPM public client available")\n' > "$dir/Sources/Consumer/main.swift"
+          cd "$dir"
+          swift package resolve
+          swift build
+          swift run Consumer
